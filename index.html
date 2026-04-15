@@ -1,0 +1,2304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Go Nimbly × ClickUp — Project Intelligence</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222635;
+    --border: #2e3248;
+    --accent: #7c5cfc;
+    --accent2: #5c9afc;
+    --success: #3ecf8e;
+    --warn: #f5a623;
+    --danger: #e84545;
+    --text: #e8eaf6;
+    --muted: #7b82a8;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 80px;
+  }
+
+  /* HEADER */
+  .header {
+    width: 100%;
+    max-width: 760px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 40px;
+  }
+  .logo {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+  .header span { font-size: 13px; color: var(--muted); margin-top: 2px; display: block; }
+
+  /* STEPPER */
+  .stepper {
+    width: 100%;
+    max-width: 760px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 36px;
+  }
+  .step-item {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    position: relative;
+  }
+  .step-item:last-child { flex: none; }
+  .step-dot {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    color: var(--muted);
+    flex-shrink: 0;
+    transition: all .3s;
+    z-index: 1;
+  }
+  .step-item.active .step-dot {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+  }
+  .step-item.done .step-dot {
+    border-color: var(--success);
+    background: var(--success);
+    color: #fff;
+  }
+  .step-line {
+    flex: 1;
+    height: 2px;
+    background: var(--border);
+    transition: background .3s;
+  }
+  .step-item.done .step-line { background: var(--success); }
+  .step-label {
+    font-size: 11px;
+    color: var(--muted);
+    position: absolute;
+    top: 38px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+  .step-item.active .step-label { color: var(--accent); }
+  .step-item.done .step-label { color: var(--success); }
+
+  /* CARD */
+  .card {
+    width: 100%;
+    max-width: 760px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 36px 40px;
+  }
+  .card h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .card .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 28px; line-height: 1.6; }
+
+  /* FORM */
+  .field { margin-bottom: 20px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .field label .optional { color: var(--muted); font-weight: 400; margin-left: 4px; }
+  .field input, .field select {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    transition: border-color .2s;
+    appearance: none;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .field input::placeholder { color: var(--muted); }
+  .field .hint { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .field .hint a { color: var(--accent2); text-decoration: none; }
+
+  /* BUTTONS */
+  .btn {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all .2s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #6a4ee0; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--accent); }
+  .btn-success {
+    background: var(--success);
+    color: #0f1117;
+  }
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 28px;
+    justify-content: flex-end;
+  }
+
+  /* TILES */
+  .tile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .tile {
+    padding: 16px 18px;
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .tile:hover { border-color: var(--accent); }
+  .tile.selected { border-color: var(--accent); background: rgba(124,92,252,.12); }
+  .tile .tile-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .tile .tile-meta { font-size: 12px; color: var(--muted); }
+  .tile .tile-icon { font-size: 24px; margin-bottom: 10px; }
+
+  /* OUTPUT TYPE CARDS */
+  .output-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .output-card {
+    padding: 20px;
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .output-card:hover { border-color: var(--accent); }
+  .output-card.selected { border-color: var(--accent); background: rgba(124,92,252,.12); }
+  .output-card .oc-icon { font-size: 28px; margin-bottom: 10px; }
+  .output-card .oc-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .output-card .oc-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .output-card .oc-badge {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(124,92,252,.2);
+    color: var(--accent);
+  }
+
+  /* PROGRESS */
+  .progress-bar-wrap {
+    background: var(--surface2);
+    border-radius: 100px;
+    height: 6px;
+    margin: 16px 0;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 100px;
+    transition: width .4s;
+  }
+  .progress-label { font-size: 13px; color: var(--muted); text-align: center; }
+
+  /* STATUS PILL */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .pill-success { background: rgba(62,207,142,.15); color: var(--success); }
+  .pill-warn { background: rgba(245,166,35,.15); color: var(--warn); }
+  .pill-danger { background: rgba(232,69,69,.15); color: var(--danger); }
+  .pill-purple { background: rgba(124,92,252,.15); color: var(--accent); }
+
+  /* OUTPUT AREA */
+  #output-area {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    font-size: 13px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    max-height: 500px;
+    overflow-y: auto;
+    font-family: 'Menlo', monospace;
+    color: #c9d1d9;
+  }
+  .output-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+
+  /* ALERT */
+  .alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .alert-info { background: rgba(92,154,252,.1); border: 1px solid rgba(92,154,252,.3); color: var(--accent2); }
+  .alert-danger { background: rgba(232,69,69,.1); border: 1px solid rgba(232,69,69,.3); color: var(--danger); }
+  .alert-success { background: rgba(62,207,142,.1); border: 1px solid rgba(62,207,142,.3); color: var(--success); }
+
+  /* SPINNER */
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid rgba(255,255,255,.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* LOADING OVERLAY */
+  .loading-overlay {
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .loading-overlay .spinner {
+    width: 40px; height: 40px;
+    border-width: 3px;
+    margin-bottom: 16px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* TASK TABLE */
+  .task-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-top: 8px;
+  }
+  .task-table th {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .task-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .task-table tr:last-child td { border-bottom: none; }
+  .task-table tr:hover td { background: rgba(255,255,255,.02); }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: 12px;
+    margin-top: 24px;
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  /* HIDE/SHOW */
+  .hidden { display: none !important; }
+
+  /* STYLE LIBRARY */
+  .style-library-btn {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    padding: 11px 18px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0,0,0,.4);
+    transition: all .2s;
+  }
+  .style-library-btn:hover { border-color: var(--accent); background: rgba(124,92,252,.12); }
+  .style-library-btn .sl-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background .2s;
+  }
+  .style-library-btn.has-examples .sl-dot { background: var(--success); }
+
+  .sl-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.6);
+    z-index: 200;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: 20px;
+  }
+  .sl-panel {
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  .sl-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .sl-header h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .sl-header p { font-size: 12px; color: var(--muted); line-height: 1.5; max-width: 360px; }
+  .sl-close {
+    background: none; border: none; color: var(--muted);
+    font-size: 20px; cursor: pointer; padding: 0; line-height: 1;
+    flex-shrink: 0; margin-left: 12px;
+  }
+  .sl-close:hover { color: var(--text); }
+  .sl-body {
+    padding: 20px 24px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .sl-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 4px;
+  }
+  .sl-tab {
+    flex: 1;
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .15s;
+    text-align: center;
+  }
+  .sl-tab.active {
+    background: var(--surface);
+    color: var(--text);
+  }
+  .sl-tab .sl-tab-count {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 10px;
+    padding: 1px 6px;
+    font-size: 10px;
+    margin-left: 4px;
+  }
+  .sl-dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    position: relative;
+    margin-bottom: 16px;
+  }
+  .sl-dropzone:hover, .sl-dropzone.drag-over { border-color: var(--accent); background: rgba(124,92,252,.06); }
+  .sl-dropzone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .sl-dropzone .sl-dz-icon { font-size: 28px; margin-bottom: 8px; }
+  .sl-dropzone .sl-dz-text { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .sl-dropzone .sl-dz-sub { font-size: 12px; color: var(--muted); }
+  .sl-file-list { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .sl-file-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border-radius: 8px;
+    font-size: 12px;
+  }
+  .sl-file-item .sl-fi-name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sl-file-item .sl-fi-size { color: var(--muted); flex-shrink: 0; }
+  .sl-file-item .sl-fi-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 0; flex-shrink: 0; }
+  .sl-file-item .sl-fi-remove:hover { color: var(--danger); }
+  .sl-status {
+    font-size: 12px;
+    color: var(--muted);
+    padding: 10px 0;
+    text-align: center;
+    font-style: italic;
+  }
+  .sl-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .sl-prompts-preview {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-top: 12px;
+  }
+  .sl-prompts-preview .sp-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    margin-bottom: 6px;
+  }
+  .sl-prompts-preview textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: #c9d1d9;
+    font-family: 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.6;
+    padding: 8px 10px;
+    resize: vertical;
+    outline: none;
+    min-height: 80px;
+    margin-bottom: 10px;
+  }
+
+  /* GDOC LINK INPUT */
+  .gdoc-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  .gdoc-row .field { flex: 1; margin-bottom: 0; }
+
+  /* ENV FILE */
+  .env-dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    margin-bottom: 24px;
+    position: relative;
+  }
+  .env-dropzone:hover, .env-dropzone.drag-over {
+    border-color: var(--accent);
+    background: rgba(124,92,252,.06);
+  }
+  .env-dropzone.loaded {
+    border-color: var(--success);
+    background: rgba(62,207,142,.06);
+  }
+  .env-dropzone input[type=file] {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .env-dropzone .env-icon { font-size: 26px; flex-shrink: 0; }
+  .env-dropzone .env-text .env-title { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+  .env-dropzone .env-text .env-sub { font-size: 12px; color: var(--muted); }
+  .env-divider {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 24px; color: var(--muted); font-size: 12px;
+  }
+  .env-divider::before, .env-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+  .download-env-banner {
+    background: rgba(62,207,142,.1);
+    border: 1px solid rgba(62,207,142,.35);
+    border-radius: 10px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .download-env-banner .deb-icon { font-size: 24px; flex-shrink: 0; margin-top: 1px; }
+  .download-env-banner .deb-text .deb-title { font-size: 14px; font-weight: 700; color: var(--success); margin-bottom: 4px; }
+  .download-env-banner .deb-text .deb-sub { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .download-env-banner .deb-btn {
+    margin-top: 10px;
+    padding: 8px 16px;
+    background: var(--success);
+    color: #0f1117;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .download-env-banner .deb-btn:hover { opacity: .85; }
+
+  /* LIST SEARCH */
+  .list-search-wrap {
+    position: relative;
+    margin-bottom: 12px;
+  }
+  .list-search-wrap input {
+    width: 100%;
+    padding: 10px 16px 10px 38px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .list-search-wrap input:focus { border-color: var(--accent); }
+  .list-search-wrap input::placeholder { color: var(--muted); }
+  .list-search-icon {
+    position: absolute;
+    left: 12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 15px;
+    pointer-events: none;
+  }
+  .list-empty {
+    text-align: center;
+    padding: 24px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  /* DATE RANGE */
+  .date-range-wrap { margin-top: 20px; }
+  .preset-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .preset-pill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .preset-pill:hover { border-color: var(--accent); color: var(--text); }
+  .preset-pill.active {
+    border-color: var(--accent);
+    background: rgba(124,92,252,.15);
+    color: var(--accent);
+  }
+  .date-inputs {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 10px;
+  }
+  .date-inputs input[type=date] {
+    flex: 1;
+    padding: 9px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    transition: border-color .2s;
+    color-scheme: dark;
+  }
+  .date-inputs input[type=date]:focus { border-color: var(--accent); }
+  .date-inputs .date-sep { color: var(--muted); font-size: 13px; flex-shrink: 0; }
+  .date-range-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+  .date-range-label strong { color: var(--text); }
+
+  /* PROMPT EDITOR */
+  .prompt-editor {
+    margin-top: 20px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .prompt-editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--surface2);
+    cursor: pointer;
+    user-select: none;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .prompt-editor-header:hover { background: #262a3a; }
+  .prompt-editor-header .pe-left { display: flex; align-items: center; gap: 8px; }
+  .prompt-editor-header .pe-chevron { transition: transform .2s; color: var(--muted); }
+  .prompt-editor-header.open .pe-chevron { transform: rotate(180deg); }
+  .prompt-editor-body {
+    display: none;
+    padding: 16px;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+  }
+  .prompt-editor-body.open { display: block; }
+  .prompt-editor-body .pe-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    margin-bottom: 6px;
+    margin-top: 14px;
+  }
+  .prompt-editor-body .pe-label:first-child { margin-top: 0; }
+  .prompt-editor-body textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: #c9d1d9;
+    font-family: 'Menlo', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    padding: 10px 12px;
+    resize: vertical;
+    outline: none;
+    transition: border-color .2s;
+    min-height: 90px;
+  }
+  .prompt-editor-body textarea:focus { border-color: var(--accent); }
+  .prompt-reset {
+    font-size: 11px;
+    color: var(--muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin-top: 6px;
+    text-decoration: underline;
+  }
+  .prompt-reset:hover { color: var(--accent2); }
+</style>
+</head>
+<body>
+
+<!-- ========== HEADER ========== -->
+<div class="header">
+  <div class="logo">⚡</div>
+  <div>
+    <h1>Go Nimbly × ClickUp Intelligence</h1>
+    <span>Generate project docs, summaries, and living artifacts from your ClickUp data</span>
+  </div>
+</div>
+
+<!-- ========== STEPPER ========== -->
+<div class="stepper" id="stepper">
+  <!-- Injected by JS -->
+</div>
+
+<!-- ========== MAIN CARD ========== -->
+<div class="card" id="main-card">
+  <!-- Injected by JS -->
+</div>
+
+<!-- ========== STYLE LIBRARY BUTTON (shown on output step) ========== -->
+<button class="style-library-btn hidden" id="sl-btn" onclick="openStyleLibrary()">
+  <span class="sl-dot" id="sl-dot"></span> Style Library
+</button>
+
+<!-- ========== STYLE LIBRARY PANEL ========== -->
+<div class="sl-overlay hidden" id="sl-overlay" onclick="if(event.target===this) closeStyleLibrary()">
+  <div class="sl-panel">
+    <div class="sl-header">
+      <div>
+        <h3>🎨 Style Library</h3>
+        <p>Drop your real project docs here. Claude will study their structure and voice, then rewrite the prompts to match — per output type.</p>
+      </div>
+      <button class="sl-close" onclick="closeStyleLibrary()">×</button>
+    </div>
+    <div class="sl-body">
+
+      <!-- TABS — one per output type -->
+      <div class="sl-tabs" id="sl-tabs">
+        <button class="sl-tab active" data-type="full_project" onclick="switchSLTab('full_project')">Full Project <span class="sl-tab-count hidden" id="sl-count-full_project">0</span></button>
+        <button class="sl-tab" data-type="weekly_summary" onclick="switchSLTab('weekly_summary')">Weekly <span class="sl-tab-count hidden" id="sl-count-weekly_summary">0</span></button>
+        <button class="sl-tab" data-type="status_report" onclick="switchSLTab('status_report')">Status <span class="sl-tab-count hidden" id="sl-count-status_report">0</span></button>
+        <button class="sl-tab" data-type="decision_log" onclick="switchSLTab('decision_log')">Decisions <span class="sl-tab-count hidden" id="sl-count-decision_log">0</span></button>
+      </div>
+
+      <!-- DROP ZONE -->
+      <div class="sl-dropzone" id="sl-dropzone"
+        ondragover="event.preventDefault(); this.classList.add('drag-over')"
+        ondragleave="this.classList.remove('drag-over')"
+        ondrop="handleSLDrop(event)">
+        <input type="file" multiple accept=".md,.txt,.doc,.docx,text/plain,text/markdown" onchange="handleSLUpload(this.files)" />
+        <div class="sl-dz-icon">📂</div>
+        <div class="sl-dz-text">Drop examples for <span id="sl-tab-label">Full Project</span></div>
+        <div class="sl-dz-sub">.md or .txt files — from your <code>examples/full_project/</code> folder</div>
+      </div>
+
+      <!-- FILE LIST for current tab -->
+      <ul class="sl-file-list" id="sl-file-list"></ul>
+      <div class="sl-status" id="sl-status">No examples loaded for this output type yet.</div>
+
+      <!-- GENERATED PROMPTS PREVIEW (shown after training) -->
+      <div class="sl-prompts-preview hidden" id="sl-prompts-preview">
+        <div class="sp-label">Generated System Prompt</div>
+        <textarea id="sl-sys-preview" rows="4"></textarea>
+        <div class="sp-label">Generated User Prompt Template</div>
+        <textarea id="sl-usr-preview" rows="5"></textarea>
+        <div style="display:flex; gap:8px; margin-top:4px;">
+          <button class="btn btn-secondary" style="font-size:12px; padding:7px 14px;" onclick="applyLearnedPrompts()">Apply to this output type</button>
+          <button class="btn btn-secondary" style="font-size:12px; padding:7px 14px;" onclick="applyLearnedPromptsAll()">Apply to all output types</button>
+        </div>
+      </div>
+
+    </div>
+    <div class="sl-footer">
+      <button class="btn btn-primary" id="sl-train-btn" onclick="trainFromExamples()" disabled>
+        ✨ Generate prompts from examples
+      </button>
+      <button class="btn btn-secondary" onclick="exportPromptsJSON()">⬇ Export prompts.json</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('sl-import-input').click()">⬆ Import prompts.json</button>
+      <input type="file" id="sl-import-input" accept=".json,application/json" class="hidden" onchange="importPromptsJSON(this.files[0])" />
+    </div>
+  </div>
+</div>
+
+<!-- ========== SCRIPTS ========== -->
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const state = {
+  step: 0,
+  clickupToken: '',
+  claudeKey: '',
+  workspace: null,      // { id, name }
+  space: null,          // { id, name }
+  list: null,           // { id, name }
+  outputType: null,     // string key
+  gdocUrl: '',
+  tasks: [],
+  comments: {},         // task_id -> []
+  generatedDoc: '',
+  existingDoc: '',      // previously uploaded doc content
+  dateRange: {
+    preset: 'this_week',   // preset key or 'custom'
+    start: null,           // ms timestamp
+    end: null,             // ms timestamp
+  },
+};
+
+const STEPS = [
+  { label: 'Auth' },
+  { label: 'Workspace' },
+  { label: 'Project' },
+  { label: 'Output' },
+  { label: 'Generate' },
+];
+
+const OUTPUT_TYPES = {
+  full_project: {
+    icon: '📚',
+    title: 'Full Project Document',
+    desc: 'Comprehensive map of every task, status, assignee, and comment thread — the keystone living document.',
+    badge: 'Keystone',
+  },
+  weekly_summary: {
+    icon: '📅',
+    title: 'Weekly Summary',
+    desc: 'Highlights tasks completed, in progress, and blocked this week. Great for standups and stakeholder updates.',
+    badge: 'Weekly',
+  },
+  status_report: {
+    icon: '📊',
+    title: 'Status Report',
+    desc: 'Snapshot of project health: completion rate, open blockers, upcoming deadlines.',
+    badge: 'Report',
+  },
+  decision_log: {
+    icon: '🔍',
+    title: 'Decision Log',
+    desc: 'Extracts key decisions and context from task comments across the entire project.',
+    badge: 'Decisions',
+  },
+};
+
+// ─── CLICKUP API ──────────────────────────────────────────────────────────────
+const CU = {
+  base: 'https://api.clickup.com/api/v2',
+
+  async get(path) {
+    const res = await fetch(CU.base + path, {
+      headers: { Authorization: state.clickupToken, 'Content-Type': 'application/json' },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.err || `HTTP ${res.status}`);
+    }
+    return res.json();
+  },
+
+  async getWorkspaces() {
+    const d = await CU.get('/team');
+    return d.teams || [];
+  },
+
+  async getSpaces(teamId) {
+    const d = await CU.get(`/team/${teamId}/space?archived=false`);
+    return d.spaces || [];
+  },
+
+  async getFolders(spaceId) {
+    const d = await CU.get(`/space/${spaceId}/folder?archived=false`);
+    return d.folders || [];
+  },
+
+  async getLists(spaceId) {
+    // Folderless lists
+    const d = await CU.get(`/space/${spaceId}/list?archived=false`);
+    return d.lists || [];
+  },
+
+  async getFolderLists(folderId) {
+    const d = await CU.get(`/folder/${folderId}/list?archived=false`);
+    return d.lists || [];
+  },
+
+  async getTasks(listId, page = 0) {
+    const d = await CU.get(
+      `/list/${listId}/task?archived=false&include_closed=true&subtasks=true&page=${page}`
+    );
+    return d.tasks || [];
+  },
+
+  async getAllTasks(listId) {
+    let page = 0, all = [], batch;
+    do {
+      batch = await CU.getTasks(listId, page++);
+      all = all.concat(batch);
+    } while (batch.length === 100);
+    return all;
+  },
+
+  async getComments(taskId) {
+    const d = await CU.get(`/task/${taskId}/comment`);
+    return d.comments || [];
+  },
+};
+
+// ─── CLAUDE API ───────────────────────────────────────────────────────────────
+async function claudeGenerate(systemPrompt, userPrompt) {
+  if (!state.claudeKey) throw new Error('No Claude API key provided');
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': state.claudeKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-opus-4-6',
+      max_tokens: 8192,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    }),
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.error?.message || `Claude API error ${res.status}`);
+  }
+  const d = await res.json();
+  return d.content[0].text;
+}
+
+// ─── .ENV HELPERS ────────────────────────────────────────────────────────────
+function downloadEnvFile() {
+  const lines = [
+    '# Go Nimbly × ClickUp Intelligence — API Keys',
+    '# Keep this file safe. Drag it onto the auth screen to skip setup.',
+    '',
+    `CLICKUP_TOKEN=${state.clickupToken}`,
+    `CLAUDE_KEY=${state.claudeKey}`,
+  ];
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'gonimbly-clickup.env';
+  a.click();
+}
+
+function parseEnvText(text) {
+  const result = {};
+  text.split('\n').forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) return;
+    const idx = trimmed.indexOf('=');
+    if (idx === -1) return;
+    const key = trimmed.slice(0, idx).trim();
+    const val = trimmed.slice(idx + 1).trim();
+    result[key] = val;
+  });
+  return result;
+}
+
+function applyEnvData(vars) {
+  if (vars.CLICKUP_TOKEN) {
+    state.clickupToken = vars.CLICKUP_TOKEN;
+    const el = document.getElementById('cu-token');
+    if (el) el.value = vars.CLICKUP_TOKEN;
+  }
+  if (vars.CLAUDE_KEY) {
+    state.claudeKey = vars.CLAUDE_KEY;
+    const el = document.getElementById('claude-key');
+    if (el) el.value = vars.CLAUDE_KEY;
+  }
+  state._envLoaded = true;
+
+  // Update dropzone UI
+  const dz = document.getElementById('env-dropzone');
+  const icon = document.getElementById('env-icon');
+  const title = document.getElementById('env-dropzone-title');
+  const sub = document.getElementById('env-dropzone-sub');
+  if (dz) dz.classList.add('loaded');
+  if (icon) icon.textContent = '✅';
+  if (title) title.textContent = 'Keys loaded from .env';
+  if (sub) sub.textContent = `ClickUp token${vars.CLAUDE_KEY ? ' + Claude key' : ''} ready`;
+}
+
+function handleEnvUpload(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const vars = parseEnvText(e.target.result);
+    applyEnvData(vars);
+  };
+  reader.readAsText(file);
+}
+
+function handleEnvDrop(event) {
+  event.preventDefault();
+  const dz = document.getElementById('env-dropzone');
+  if (dz) dz.classList.remove('drag-over');
+  const file = event.dataTransfer?.files?.[0];
+  if (file) handleEnvUpload(file);
+}
+
+// ─── EXISTING DOC UPLOAD ──────────────────────────────────────────────────────
+function handleExistingDocUpload(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    state.existingDoc = e.target.result;
+    const dz = document.getElementById('existing-doc-dropzone');
+    const icon = document.getElementById('existing-doc-icon');
+    const title = document.getElementById('existing-doc-title');
+    const sub = document.getElementById('existing-doc-sub');
+    const preview = document.getElementById('existing-doc-preview');
+    const previewText = document.getElementById('existing-doc-preview-text');
+    if (dz) dz.classList.add('loaded');
+    if (icon) icon.textContent = '✅';
+    if (title) title.textContent = file.name;
+    const wordCount = state.existingDoc.split(/\s+/).length;
+    if (sub) sub.textContent = `${wordCount.toLocaleString()} words loaded — Claude will update this doc, not rewrite it`;
+    if (preview) preview.classList.remove('hidden');
+    if (previewText) previewText.textContent = state.existingDoc.slice(0, 800) + (state.existingDoc.length > 800 ? '\n…' : '');
+  };
+  reader.readAsText(file);
+}
+
+function handleExistingDocDrop(event) {
+  event.preventDefault();
+  const dz = document.getElementById('existing-doc-dropzone');
+  if (dz) dz.classList.remove('drag-over');
+  const file = event.dataTransfer?.files?.[0];
+  if (file) handleExistingDocUpload(file);
+}
+
+function clearExistingDoc() {
+  state.existingDoc = '';
+  const dz = document.getElementById('existing-doc-dropzone');
+  const icon = document.getElementById('existing-doc-icon');
+  const title = document.getElementById('existing-doc-title');
+  const sub = document.getElementById('existing-doc-sub');
+  const preview = document.getElementById('existing-doc-preview');
+  if (dz) dz.classList.remove('loaded');
+  if (icon) icon.textContent = '📄';
+  if (title) title.textContent = 'Upload previous summary or master doc';
+  if (sub) sub.textContent = 'Drag & drop a .md or .txt file — Claude will update it rather than rewrite';
+  if (preview) preview.classList.add('hidden');
+}
+
+// ─── RENDER STEPPER ───────────────────────────────────────────────────────────
+function renderStepper() {
+  const el = document.getElementById('stepper');
+  el.innerHTML = STEPS.map((s, i) => {
+    const cls = i < state.step ? 'done' : i === state.step ? 'active' : '';
+    const icon = i < state.step ? '✓' : i + 1;
+    const line = i < STEPS.length - 1 ? '<div class="step-line"></div>' : '';
+    return `
+      <div class="step-item ${cls}">
+        <div class="step-dot">${icon}</div>
+        <span class="step-label">${s.label}</span>
+        ${line}
+      </div>`;
+  }).join('');
+  updateSLButtonVisibility();
+}
+
+// ─── STEP RENDERERS ───────────────────────────────────────────────────────────
+
+// STEP 0 — AUTH
+function renderStepAuth(showDownloadBanner = false) {
+  const card = document.getElementById('main-card');
+  card.innerHTML = `
+    <h2>Connect your accounts</h2>
+    <p class="subtitle">Paste your ClickUp personal API token to get started. The Claude API key is optional — it powers AI-written summaries and documents.</p>
+
+    ${showDownloadBanner ? `
+    <div class="download-env-banner">
+      <div class="deb-icon">🔑</div>
+      <div class="deb-text">
+        <div class="deb-title">Save your keys for next time</div>
+        <div class="deb-sub">Download your <code>.env</code> file and keep it somewhere safe. Next time, just drag it onto this screen to skip setup.</div>
+        <button class="deb-btn" onclick="downloadEnvFile()">⬇ Download .env</button>
+      </div>
+    </div>` : ''}
+
+    <div class="env-dropzone" id="env-dropzone"
+      ondragover="event.preventDefault(); this.classList.add('drag-over')"
+      ondragleave="this.classList.remove('drag-over')"
+      ondrop="handleEnvDrop(event)">
+      <input type="file" accept=".env,text/plain" onchange="handleEnvUpload(this.files[0])" />
+      <div class="env-icon" id="env-icon">📂</div>
+      <div class="env-text">
+        <div class="env-title" id="env-dropzone-title">Upload your .env file</div>
+        <div class="env-sub" id="env-dropzone-sub">Drag & drop or click to browse — auto-fills your keys below</div>
+      </div>
+    </div>
+
+    <div class="env-divider">or enter keys manually</div>
+
+    <div class="field">
+      <label>ClickUp Personal API Token <span style="color:var(--danger)">*</span></label>
+      <input type="password" id="cu-token" placeholder="pk_XXXXXXXXX..." value="${state.clickupToken}" />
+      <div class="hint">
+        Settings → My Settings → Apps → Generate API Token.
+        <a href="https://app.clickup.com/settings/apps" target="_blank">Open ClickUp ↗</a>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Claude (Anthropic) API Key <span class="optional">(optional — needed for AI summaries)</span></label>
+      <input type="password" id="claude-key" placeholder="sk-ant-XXXXXXXXX..." value="${state.claudeKey}" />
+      <div class="hint">
+        <a href="https://console.anthropic.com/settings/keys" target="_blank">Get a key at console.anthropic.com ↗</a>
+      </div>
+    </div>
+
+    <div class="alert alert-info" style="margin-bottom:0;">
+      ℹ️ Your keys stay in this browser tab only — nothing is sent to any server except ClickUp and Anthropic's APIs.
+    </div>
+
+    <div id="auth-error" class="alert alert-danger hidden"></div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="submitAuth()">Connect & Continue →</button>
+    </div>
+  `;
+}
+
+async function submitAuth() {
+  const token = document.getElementById('cu-token').value.trim();
+  const claude = document.getElementById('claude-key').value.trim();
+  const errEl = document.getElementById('auth-error');
+  errEl.classList.add('hidden');
+
+  if (!token) {
+    errEl.textContent = 'ClickUp API token is required.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  state.clickupToken = token;
+  state.claudeKey = claude;
+
+  // Validate token
+  const card = document.getElementById('main-card');
+  card.innerHTML = `<div class="loading-overlay"><div class="spinner"></div><p>Verifying ClickUp token…</p></div>`;
+
+  try {
+    const workspaces = await CU.getWorkspaces();
+    state._workspaces = workspaces;
+
+    // First-time setup: show download banner before moving to workspace step
+    if (!state._envLoaded) {
+      renderStepAuth(true); // show banner with download button
+      // Give user a moment to download, then auto-advance after they dismiss or click continue
+      // Replace the btn-row to say "I've saved it, continue"
+      setTimeout(() => {
+        const btnRow = document.querySelector('.btn-row');
+        if (btnRow) btnRow.innerHTML = `
+          <button class="btn btn-secondary" onclick="skipEnvDownload()">Skip for now</button>
+          <button class="btn btn-primary" onclick="skipEnvDownload()">Continue to workspace →</button>
+        `;
+      }, 50);
+      window._pendingWorkspaces = workspaces;
+    } else {
+      state.step = 1;
+      renderStepper();
+      renderStepWorkspace(workspaces);
+    }
+  } catch (e) {
+    renderStepAuth();
+    const err2 = document.getElementById('auth-error');
+    err2.textContent = `Could not connect: ${e.message}`;
+    err2.classList.remove('hidden');
+  }
+}
+
+function skipEnvDownload() {
+  state.step = 1;
+  renderStepper();
+  renderStepWorkspace(window._pendingWorkspaces || state._workspaces);
+}
+
+// STEP 1 — WORKSPACE
+function renderStepWorkspace(workspaces) {
+  const card = document.getElementById('main-card');
+  card.innerHTML = `
+    <h2>Choose your workspace</h2>
+    <p class="subtitle">Select the ClickUp workspace that contains the Go Nimbly project.</p>
+    <div class="tile-grid" id="workspace-tiles">
+      ${workspaces.map(w => `
+        <div class="tile" onclick="selectWorkspace('${w.id}', '${escHtml(w.name)}')" id="ws-${w.id}">
+          <div class="tile-icon">🏢</div>
+          <div class="tile-name">${escHtml(w.name)}</div>
+          <div class="tile-meta">${(w.members || []).length} member${(w.members || []).length !== 1 ? 's' : ''}</div>
+        </div>`).join('')}
+    </div>
+    <div id="ws-error" class="alert alert-danger hidden" style="margin-top:16px;"></div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="state.step=0; renderStepper(); renderStepAuth()">← Back</button>
+    </div>
+  `;
+}
+
+async function selectWorkspace(id, name) {
+  document.querySelectorAll('#workspace-tiles .tile').forEach(t => t.classList.remove('selected'));
+  document.getElementById(`ws-${id}`)?.classList.add('selected');
+  state.workspace = { id, name };
+
+  const card = document.getElementById('main-card');
+  card.innerHTML = `<div class="loading-overlay"><div class="spinner"></div><p>Loading spaces in <strong>${escHtml(name)}</strong>…</p></div>`;
+
+  try {
+    const spaces = await CU.getSpaces(id);
+    state._spaces = spaces;
+    state.step = 2;
+    renderStepper();
+    renderStepProject(spaces);
+  } catch (e) {
+    renderStepWorkspace(state._workspaces);
+    document.getElementById('ws-error').textContent = e.message;
+    document.getElementById('ws-error').classList.remove('hidden');
+  }
+}
+
+// STEP 2 — PROJECT (Space → List)
+function renderStepProject(spaces) {
+  const card = document.getElementById('main-card');
+  card.innerHTML = `
+    <h2>Choose a project</h2>
+    <p class="subtitle">Select a Space, then pick the list you want to document.</p>
+
+    <div class="section-title">Space</div>
+    <div class="tile-grid" id="space-tiles">
+      ${spaces.map(s => `
+        <div class="tile" onclick="selectSpace('${s.id}', '${escHtml(s.name)}')" id="sp-${s.id}">
+          <div class="tile-icon">📁</div>
+          <div class="tile-name">${escHtml(s.name)}</div>
+        </div>`).join('')}
+    </div>
+
+    <div id="list-section" class="hidden">
+      <div class="section-title" style="margin-top:28px;">List</div>
+      <div class="tile-grid" id="list-tiles"></div>
+    </div>
+
+    <div id="proj-error" class="alert alert-danger hidden" style="margin-top:16px;"></div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="state.step=1; renderStepper(); renderStepWorkspace(state._workspaces)">← Back</button>
+      <button class="btn btn-primary hidden" id="proj-next" onclick="goToOutput()">Choose Output →</button>
+    </div>
+  `;
+}
+
+async function selectSpace(id, name) {
+  document.querySelectorAll('#space-tiles .tile').forEach(t => t.classList.remove('selected'));
+  document.getElementById(`sp-${id}`)?.classList.add('selected');
+  state.space = { id, name };
+  state.list = null;
+  document.getElementById('proj-next')?.classList.add('hidden');
+
+  const listSection = document.getElementById('list-section');
+  listSection.innerHTML = `<div class="loading-overlay"><div class="spinner"></div><p>Loading lists…</p></div>`;
+  listSection.classList.remove('hidden');
+
+  try {
+    const [folders, folderless] = await Promise.all([
+      CU.getFolders(id),
+      CU.getLists(id),
+    ]);
+
+    // Flatten: folder lists + folderless
+    let allLists = [...folderless];
+    for (const f of folders) {
+      const fl = await CU.getFolderLists(f.id);
+      fl.forEach(l => { l._folderName = f.name; });
+      allLists = allLists.concat(fl);
+    }
+    state._lists = allLists;
+
+    listSection.innerHTML = `
+      <div class="section-title" style="margin-top:28px;">List <span style="font-weight:400;text-transform:none;font-size:12px;color:var(--muted)">${allLists.length} found</span></div>
+      <div class="list-search-wrap">
+        <span class="list-search-icon">🔍</span>
+        <input type="text" id="list-search" placeholder="Search lists…" oninput="filterLists(this.value)" autocomplete="off" />
+      </div>
+      <div class="tile-grid" id="list-tiles">
+        ${allLists.map(l => `
+          <div class="tile" onclick="selectList('${l.id}', '${escHtml(l.name)}')" id="li-${l.id}" data-name="${escHtml(l.name).toLowerCase()}" data-folder="${escHtml(l._folderName || '').toLowerCase()}">
+            <div class="tile-icon">📋</div>
+            <div class="tile-name">${escHtml(l.name)}</div>
+            ${l._folderName ? `<div class="tile-meta">📁 ${escHtml(l._folderName)}</div>` : ''}
+          </div>`).join('')}
+      </div>
+      <div id="list-empty" class="list-empty hidden">No lists match your search.</div>
+    `;
+  } catch (e) {
+    listSection.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+  }
+}
+
+function selectList(id, name) {
+  document.querySelectorAll('#list-tiles .tile').forEach(t => t.classList.remove('selected'));
+  document.getElementById(`li-${id}`)?.classList.add('selected');
+  state.list = { id, name };
+  document.getElementById('proj-next')?.classList.remove('hidden');
+}
+
+function filterLists(query) {
+  const q = query.toLowerCase().trim();
+  const tiles = document.querySelectorAll('#list-tiles .tile');
+  let visible = 0;
+  tiles.forEach(t => {
+    const match = !q || t.dataset.name.includes(q) || t.dataset.folder.includes(q);
+    t.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  const empty = document.getElementById('list-empty');
+  if (empty) empty.classList.toggle('hidden', visible > 0);
+}
+
+function goToOutput() {
+  if (!state.list) return;
+  state.step = 3;
+  renderStepper();
+  renderStepOutput();
+}
+
+// ─── EDITABLE PROMPTS ─────────────────────────────────────────────────────────
+const DEFAULT_PROMPTS = {
+  full_project: {
+    system: `You are a project documentation expert for Go Nimbly, a revenue operations consultancy.\nYou write clear, professional, actionable documents from raw project data.\nYour output should be well-structured markdown with headers, be honest about blockers, and surface key decisions.\nDo not pad content — be direct and useful.`,
+    user: `Generate a Full Project Document for the project "{{project}}" ({{workspace}} / {{space}}).\nGenerated on: {{date}}\nTotal tasks: {{count}}\n\nHere is all the task data:\n\n{{tasks}}\n\nWrite a complete, professional Full Project Document in markdown. Include all tasks, statuses, assignees, comment threads as context, and any decision points surfaced in comments. Be specific and comprehensive.`,
+  },
+  weekly_summary: {
+    system: `You are a project documentation expert for Go Nimbly, a revenue operations consultancy.\nYou write clear, professional, actionable documents from raw project data.\nFocus on what moved during the period — completed, progressed, blocked, or discussed.\nBe direct and concise — stakeholders should be able to read this in 2 minutes.`,
+    user: `Generate a Summary for the project "{{project}}" ({{workspace}} / {{space}}).\nPeriod: {{range_label}} — {{range_start}} to {{range_end}}\nGenerated on: {{date}}\nTotal tasks: {{count}} | Active in period: {{active_count}}\n\nHere is all the task data (tasks active in the period are marked with 🟢):\n\n{{tasks}}\n\nWrite a concise period summary in markdown. Lead with what moved (completed, progressed, discussed). Call out blockers explicitly. Surface any key decisions from comments. Keep it scannable.`,
+  },
+  status_report: {
+    system: `You are a project documentation expert for Go Nimbly, a revenue operations consultancy.\nYou write clear, professional, actionable documents from raw project data.\nFocus on project health metrics: completion rate, blockers, risks, and upcoming milestones.\nBe honest — flag real risks, not just green-washing.`,
+    user: `Generate a Status Report for the project "{{project}}" ({{workspace}} / {{space}}).\nPeriod: {{range_label}} — {{range_start}} to {{range_end}}\nGenerated on: {{date}}\nTotal tasks: {{count}} | Active in period: {{active_count}}\n\nHere is all the task data:\n\n{{tasks}}\n\nWrite a Status Report in markdown. Include overall health rating, completion stats, what moved this period, open blockers, upcoming due dates, and recommendations for the team.`,
+  },
+  decision_log: {
+    system: `You are a project documentation expert for Go Nimbly, a revenue operations consultancy.\nYou extract key decisions, open questions, and important context from task comments.\nBe precise — only flag genuine decisions or unresolved questions, not general chatter.`,
+    user: `Generate a Decision Log for the project "{{project}}" ({{workspace}} / {{space}}).\nPeriod: {{range_label}} — {{range_start}} to {{range_end}}\nGenerated on: {{date}}\nTotal tasks: {{count}} | Active in period: {{active_count}}\n\nHere is all the task data:\n\n{{tasks}}\n\nWrite a Decision Log in markdown covering only the selected period. For each significant decision or open question found in comments from this period, list: the task context, who made or proposed it, the decision itself, and any unresolved questions.`,
+  },
+};
+
+// Live copies the user can edit
+const PROMPTS = JSON.parse(JSON.stringify(DEFAULT_PROMPTS));
+
+// ─── DATE RANGE HELPERS ───────────────────────────────────────────────────────
+const DATE_PRESETS = [
+  { key: 'this_week',   label: 'This week' },
+  { key: 'last_week',   label: 'Last week' },
+  { key: 'two_weeks',   label: 'Last 2 weeks' },
+  { key: 'this_month',  label: 'This month' },
+  { key: 'last_30',     label: 'Last 30 days' },
+  { key: 'custom',      label: 'Custom range' },
+];
+
+function getPresetRange(key) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayMs = today.getTime();
+  const endOfToday = todayMs + 24 * 60 * 60 * 1000 - 1;
+
+  // Week starts Monday
+  const dayOfWeek = (today.getDay() + 6) % 7; // Mon=0 … Sun=6
+
+  switch (key) {
+    case 'this_week': {
+      const start = todayMs - dayOfWeek * 86400000;
+      return { start, end: endOfToday };
+    }
+    case 'last_week': {
+      const startThisWeek = todayMs - dayOfWeek * 86400000;
+      const end = startThisWeek - 1;
+      const start = startThisWeek - 7 * 86400000;
+      return { start, end };
+    }
+    case 'two_weeks': {
+      const start = todayMs - (dayOfWeek + 7) * 86400000;
+      return { start, end: endOfToday };
+    }
+    case 'this_month': {
+      const start = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
+      return { start, end: endOfToday };
+    }
+    case 'last_30': {
+      return { start: todayMs - 30 * 86400000, end: endOfToday };
+    }
+    default:
+      return null;
+  }
+}
+
+function applyPreset(key) {
+  state.dateRange.preset = key;
+  const range = getPresetRange(key);
+  if (range) {
+    state.dateRange.start = range.start;
+    state.dateRange.end = range.end;
+  }
+  // Update pill UI
+  document.querySelectorAll('.preset-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.key === key);
+  });
+  // Show/hide custom inputs
+  const customInputs = document.getElementById('custom-date-inputs');
+  if (customInputs) customInputs.classList.toggle('hidden', key !== 'custom');
+  updateDateRangeLabel();
+}
+
+function applyCustomDates() {
+  const startEl = document.getElementById('dr-start');
+  const endEl = document.getElementById('dr-end');
+  if (!startEl?.value || !endEl?.value) return;
+  state.dateRange.start = new Date(startEl.value).getTime();
+  state.dateRange.end = new Date(endEl.value).getTime() + 86400000 - 1;
+  updateDateRangeLabel();
+}
+
+function updateDateRangeLabel() {
+  const el = document.getElementById('dr-label');
+  if (!el) return;
+  if (!state.dateRange.start || !state.dateRange.end) {
+    el.innerHTML = '';
+    return;
+  }
+  const fmt = ms => new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  el.innerHTML = `Showing tasks active between <strong>${fmt(state.dateRange.start)}</strong> and <strong>${fmt(state.dateRange.end)}</strong>`;
+}
+
+function toDateInputValue(ms) {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// Initialise default range (this week) once
+(function initDateRange() {
+  const range = getPresetRange('this_week');
+  state.dateRange.start = range.start;
+  state.dateRange.end = range.end;
+})();
+
+// STEP 3 — OUTPUT TYPE
+function renderStepOutput() {
+  const card = document.getElementById('main-card');
+  const needsClaude = !state.claudeKey;
+  card.innerHTML = `
+    <h2>What do you want to generate?</h2>
+    <p class="subtitle">Choose the type of document to create from <strong>${escHtml(state.list.name)}</strong>.</p>
+
+    ${needsClaude ? `<div class="alert alert-info">💡 Add a Claude API key on step 1 to unlock AI-written narrative summaries. Without it, documents are generated as structured data exports.</div>` : ''}
+
+    <div class="output-grid">
+      ${Object.entries(OUTPUT_TYPES).map(([key, o]) => `
+        <div class="output-card" onclick="selectOutput('${key}')" id="ot-${key}">
+          <div class="oc-icon">${o.icon}</div>
+          <div class="oc-title">${o.title}</div>
+          <div class="oc-desc">${o.desc}</div>
+          <span class="oc-badge">${o.badge}</span>
+        </div>`).join('')}
+    </div>
+
+    <div id="date-range-wrap" class="hidden">
+      <div class="section-title" style="margin-top:24px;">Date Range — <span style="font-weight:400;text-transform:none;font-size:12px;">What moved during this period?</span></div>
+      <div class="preset-pills">
+        ${DATE_PRESETS.map(p => `<button class="preset-pill${p.key === state.dateRange.preset ? ' active' : ''}" data-key="${p.key}" onclick="applyPreset('${p.key}')">${p.label}</button>`).join('')}
+      </div>
+      <div id="custom-date-inputs" class="date-inputs ${state.dateRange.preset !== 'custom' ? 'hidden' : ''}">
+        <input type="date" id="dr-start" value="${state.dateRange.start ? toDateInputValue(state.dateRange.start) : ''}" onchange="applyCustomDates()" />
+        <span class="date-sep">→</span>
+        <input type="date" id="dr-end" value="${state.dateRange.end ? toDateInputValue(state.dateRange.end) : ''}" onchange="applyCustomDates()" />
+      </div>
+      <p class="date-range-label" id="dr-label"></p>
+    </div>
+
+    <div id="prompt-editor-wrap" class="hidden">
+      <div class="prompt-editor" id="prompt-editor">
+        <div class="prompt-editor-header" onclick="togglePromptEditor()" id="pe-header">
+          <span class="pe-left">🛠 <span id="pe-title">Customize Prompt</span></span>
+          <span class="pe-chevron">▾</span>
+        </div>
+        <div class="prompt-editor-body" id="pe-body">
+          ${state.claudeKey ? `
+          <div class="pe-label">System Prompt</div>
+          <textarea id="pe-system" rows="4" spellcheck="false"></textarea>
+          <button class="prompt-reset" onclick="resetPrompt('system')">Reset to default</button>
+          <div class="pe-label" style="margin-top:14px;">User Prompt Template <span style="font-weight:400;font-size:10px;color:var(--muted)"> — use {{project}}, {{workspace}}, {{space}}, {{date}}, {{count}}, {{tasks}}</span></div>
+          <textarea id="pe-user" rows="6" spellcheck="false"></textarea>
+          <button class="prompt-reset" onclick="resetPrompt('user')">Reset to default</button>
+          ` : `
+          <p style="font-size:13px;color:var(--muted);line-height:1.6;">Prompt editing is available when a Claude API key is connected. <a href="#" onclick="state.step=0; renderStepper(); renderStepAuth(); return false;" style="color:var(--accent2);">Add key on step 1 ↗</a></p>
+          `}
+        </div>
+      </div>
+    </div>
+
+    <div id="existing-doc-section" class="hidden" style="margin-top:20px;">
+      <div class="section-title">Existing Document <span style="font-weight:400;text-transform:none;font-size:12px;color:var(--muted)">(optional — Claude reads this first and updates rather than starting from scratch)</span></div>
+      <div class="env-dropzone" id="existing-doc-dropzone"
+        ondragover="event.preventDefault(); this.classList.add('drag-over')"
+        ondragleave="this.classList.remove('drag-over')"
+        ondrop="handleExistingDocDrop(event)">
+        <input type="file" accept=".md,.txt,.doc,.docx,text/plain,text/markdown" onchange="handleExistingDocUpload(this.files[0])" />
+        <div class="env-icon" id="existing-doc-icon">📄</div>
+        <div class="env-text">
+          <div class="env-title" id="existing-doc-title">Upload previous summary or master doc</div>
+          <div class="env-sub" id="existing-doc-sub">Drag & drop a .md or .txt file — Claude will update it rather than rewrite</div>
+        </div>
+      </div>
+      <div id="existing-doc-preview" class="hidden" style="margin-top:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span style="font-size:12px; font-weight:600; color:var(--muted);">LOADED DOCUMENT PREVIEW</span>
+          <button onclick="clearExistingDoc()" style="font-size:11px; color:var(--muted); background:none; border:none; cursor:pointer; text-decoration:underline;">Remove</button>
+        </div>
+        <div id="existing-doc-preview-text" style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 14px; font-family:Menlo,monospace; font-size:11px; color:#c9d1d9; max-height:120px; overflow-y:auto; white-space:pre-wrap;"></div>
+      </div>
+    </div>
+
+    <!-- gdoc-section removed: push now uses docs.new + clipboard -->
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="state.step=2; renderStepper(); renderStepProject(state._spaces)">← Back</button>
+      <button class="btn btn-primary hidden" id="output-next" onclick="startGeneration()">Generate Document →</button>
+    </div>
+  `;
+}
+
+function selectOutput(key) {
+  document.querySelectorAll('.output-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById(`ot-${key}`)?.classList.add('selected');
+  state.outputType = key;
+  document.getElementById('output-next')?.classList.remove('hidden');
+  document.getElementById('gdoc-section')?.classList.remove('hidden');
+
+  // Show date range, existing doc upload, and prompt editor
+  document.getElementById('date-range-wrap')?.classList.remove('hidden');
+  updateDateRangeLabel();
+  document.getElementById('existing-doc-section')?.classList.remove('hidden');
+  const wrap = document.getElementById('prompt-editor-wrap');
+  wrap?.classList.remove('hidden');
+  document.getElementById('pe-title').textContent = `Customize Prompt — ${OUTPUT_TYPES[key].title}`;
+
+  if (state.claudeKey) {
+    const sysEl = document.getElementById('pe-system');
+    const usrEl = document.getElementById('pe-user');
+    if (sysEl) sysEl.value = PROMPTS[key].system;
+    if (usrEl) usrEl.value = PROMPTS[key].user;
+  }
+}
+
+function togglePromptEditor() {
+  const header = document.getElementById('pe-header');
+  const body = document.getElementById('pe-body');
+  header?.classList.toggle('open');
+  body?.classList.toggle('open');
+}
+
+function resetPrompt(field) {
+  if (!state.outputType) return;
+  PROMPTS[state.outputType][field] = DEFAULT_PROMPTS[state.outputType][field];
+  const el = document.getElementById(field === 'system' ? 'pe-system' : 'pe-user');
+  if (el) el.value = PROMPTS[state.outputType][field];
+}
+
+function savePromptEdits() {
+  if (!state.outputType || !state.claudeKey) return;
+  const sysEl = document.getElementById('pe-system');
+  const usrEl = document.getElementById('pe-user');
+  if (sysEl) PROMPTS[state.outputType].system = sysEl.value;
+  if (usrEl) PROMPTS[state.outputType].user = usrEl.value;
+}
+
+// STEP 4 — GENERATE
+async function startGeneration() {
+  // gdoc URL field removed — push handled by docs.new + clipboard
+  state.step = 4;
+  renderStepper();
+
+  const card = document.getElementById('main-card');
+  card.innerHTML = `
+    <h2>Generating your document…</h2>
+    <p class="subtitle">Fetching all tasks and comments from <strong>${escHtml(state.list.name)}</strong>. This may take a minute for large projects.</p>
+    <div class="progress-bar-wrap"><div class="progress-bar" id="gen-progress" style="width:5%"></div></div>
+    <p class="progress-label" id="gen-label">Fetching tasks…</p>
+    <div id="gen-log" style="margin-top:20px; font-size:12px; color:var(--muted);"></div>
+  `;
+
+  const setProgress = (pct, label) => {
+    document.getElementById('gen-progress').style.width = pct + '%';
+    document.getElementById('gen-label').textContent = label;
+  };
+  const log = (msg) => {
+    const el = document.getElementById('gen-log');
+    if (el) el.innerHTML += `<div>→ ${escHtml(msg)}</div>`;
+  };
+
+  try {
+    // 1. Fetch tasks
+    setProgress(10, 'Fetching tasks…');
+    const tasks = await CU.getAllTasks(state.list.id);
+    state.tasks = tasks;
+    log(`Found ${tasks.length} task(s)`);
+    setProgress(30, `Fetching comments for ${tasks.length} tasks…`);
+
+    // 2. Fetch comments (batched to avoid rate limits)
+    state.comments = {};
+    let done = 0;
+    const batchSize = 5;
+    for (let i = 0; i < tasks.length; i += batchSize) {
+      const batch = tasks.slice(i, i + batchSize);
+      await Promise.all(batch.map(async t => {
+        try {
+          state.comments[t.id] = await CU.getComments(t.id);
+        } catch (_) {
+          state.comments[t.id] = [];
+        }
+        done++;
+      }));
+      setProgress(30 + Math.round((done / tasks.length) * 40), `Comments: ${done}/${tasks.length}`);
+    }
+    log(`Fetched comments for all tasks`);
+    setProgress(72, 'Building document…');
+
+    // 3. Build structured data
+    const docData = buildDocData();
+    setProgress(80, state.claudeKey ? 'Calling Claude to write narrative…' : 'Formatting document…');
+
+    // 4. Generate text
+    let finalDoc;
+    if (state.claudeKey) {
+      finalDoc = await generateWithClaude(docData);
+    } else {
+      finalDoc = generateStructured(docData);
+    }
+    state.generatedDoc = finalDoc;
+    setProgress(100, 'Done!');
+
+    renderStepResult(finalDoc);
+  } catch (e) {
+    card.innerHTML = `
+      <h2>Something went wrong</h2>
+      <div class="alert alert-danger" style="margin-top:16px;">❌ ${escHtml(e.message)}</div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="state.step=3; renderStepper(); renderStepOutput()">← Back</button>
+        <button class="btn btn-primary" onclick="startGeneration()">Retry</button>
+      </div>
+    `;
+  }
+}
+
+// ─── DOC BUILDERS ─────────────────────────────────────────────────────────────
+function buildDocData() {
+  const now = new Date();
+  const { start: rangeStart, end: rangeEnd, preset } = state.dateRange;
+
+  const inRange = (ms) => {
+    if (!ms) return false;
+    const t = parseInt(ms);
+    return t >= rangeStart && t <= rangeEnd;
+  };
+
+  const fmtDate = ms => ms ? new Date(parseInt(ms)).toLocaleDateString() : null;
+  const presetLabel = DATE_PRESETS.find(p => p.key === preset)?.label || 'Selected range';
+  const rangeFmt = ms => new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  return {
+    meta: {
+      project: state.list.name,
+      workspace: state.workspace.name,
+      space: state.space.name,
+      generated: now.toISOString(),
+      outputType: state.outputType,
+      rangeLabel: presetLabel,
+      rangeStart: rangeFmt(rangeStart),
+      rangeEnd: rangeFmt(rangeEnd),
+    },
+    tasks: state.tasks.map(t => {
+      // Comments that fall within the date range
+      const allComments = (state.comments[t.id] || []).map(c => ({
+        author: c.user?.username || c.user?.email || 'Unknown',
+        text: stripHtml(c.comment_text || ''),
+        date: c.date ? new Date(parseInt(c.date)).toLocaleDateString() : '',
+        ts: c.date ? parseInt(c.date) : 0,
+      }));
+      const rangeComments = allComments.filter(c => inRange(c.ts));
+
+      // Task is "active in range" if: updated in range, created in range, completed in range, or has comments in range
+      const taskUpdatedMs = t.date_updated ? parseInt(t.date_updated) : 0;
+      const taskCreatedMs = t.date_created ? parseInt(t.date_created) : 0;
+      const isActiveInRange = inRange(taskUpdatedMs) || inRange(taskCreatedMs) || rangeComments.length > 0;
+
+      return {
+        id: t.id,
+        name: t.name,
+        status: t.status?.status || 'unknown',
+        priority: t.priority?.priority || null,
+        assignees: (t.assignees || []).map(a => a.username || a.email),
+        dueDate: fmtDate(t.due_date),
+        dateCreated: fmtDate(t.date_created),
+        dateUpdated: fmtDate(t.date_updated),
+        url: t.url,
+        description: t.description || '',
+        tags: (t.tags || []).map(g => g.name),
+        isActiveInRange,
+        rangeComments,   // comments within the selected range only
+        allComments,     // full history (used by full_project doc)
+      };
+    }),
+  };
+}
+
+function generateStructured(data) {
+  const { meta, tasks } = data;
+  const lines = [];
+  const DONE_STATUSES = ['complete','closed','done'];
+  const isDone = s => DONE_STATUSES.includes((s || '').toLowerCase());
+
+  lines.push(`# ${meta.project} — ${OUTPUT_TYPES[meta.outputType]?.title}`);
+  lines.push(`Generated: ${new Date(meta.generated).toLocaleString()}`);
+  lines.push(`Period: ${meta.rangeLabel} (${meta.rangeStart} – ${meta.rangeEnd})`);
+  lines.push(`Workspace: ${meta.workspace} / ${meta.space} / ${meta.project}`);
+  lines.push('');
+
+  if (meta.outputType === 'full_project') {
+    // Full project shows ALL tasks but flags which moved in range
+    const active = tasks.filter(t => t.isActiveInRange);
+    lines.push(`## Overview`);
+    lines.push(`Total tasks: ${tasks.length}  |  Active in period: ${active.length}`);
+    const byStatus = {};
+    tasks.forEach(t => { byStatus[t.status] = (byStatus[t.status] || 0) + 1; });
+    Object.entries(byStatus).forEach(([s, n]) => lines.push(`  • ${s}: ${n}`));
+    lines.push('');
+
+    if (active.length) {
+      lines.push(`## Moved This Period`);
+      active.forEach(t => {
+        lines.push(`\n### ${t.name} ${t.isActiveInRange ? '🟢' : ''}`);
+        lines.push(`Status: ${t.status}  |  Priority: ${t.priority || 'none'}  |  Assignees: ${t.assignees.join(', ') || 'Unassigned'}`);
+        if (t.dateUpdated) lines.push(`Last updated: ${t.dateUpdated}`);
+        if (t.rangeComments.length > 0) {
+          lines.push(`\n**Comments in period (${t.rangeComments.length}):**`);
+          t.rangeComments.forEach(c => lines.push(`  [${c.date}] ${c.author}: ${c.text}`));
+        }
+        lines.push(`URL: ${t.url}`);
+      });
+      lines.push('');
+    }
+
+    lines.push(`## All Tasks`);
+    tasks.forEach(t => {
+      lines.push(`\n### ${t.name}`);
+      lines.push(`Status: ${t.status}  |  Priority: ${t.priority || 'none'}  |  Assignees: ${t.assignees.join(', ') || 'Unassigned'}`);
+      if (t.dueDate) lines.push(`Due: ${t.dueDate}`);
+      if (t.description) lines.push(`\n${t.description}`);
+      if (t.allComments.length > 0) {
+        lines.push(`\n**All Comments (${t.allComments.length}):**`);
+        t.allComments.forEach(c => lines.push(`  [${c.date}] ${c.author}: ${c.text}`));
+      }
+      lines.push(`URL: ${t.url}`);
+    });
+  }
+
+  else if (meta.outputType === 'weekly_summary') {
+    const active = tasks.filter(t => t.isActiveInRange);
+    lines.push(`## ${meta.rangeLabel} — ${meta.rangeStart} to ${meta.rangeEnd}`);
+    lines.push(`${active.length} task${active.length !== 1 ? 's' : ''} moved out of ${tasks.length} total.\n`);
+
+    const completed = active.filter(t => isDone(t.status));
+    const inProgress = active.filter(t => ['in progress','in review','active'].includes(t.status.toLowerCase()));
+    const blocked = active.filter(t => t.status.toLowerCase().includes('block'));
+    const other = active.filter(t => !completed.includes(t) && !inProgress.includes(t) && !blocked.includes(t));
+
+    lines.push(`### ✅ Completed (${completed.length})`);
+    completed.length ? completed.forEach(t => {
+      lines.push(`  • ${t.name}${t.assignees.length ? ` — ${t.assignees.join(', ')}` : ''}`);
+    }) : lines.push('  None');
+
+    lines.push(`\n### 🔄 In Progress (${inProgress.length})`);
+    inProgress.length ? inProgress.forEach(t => {
+      const recentComment = t.rangeComments.at(-1);
+      lines.push(`  • ${t.name}${t.assignees.length ? ` — ${t.assignees.join(', ')}` : ''}`);
+      if (recentComment) lines.push(`    Latest: "${recentComment.text.slice(0, 120)}…" — ${recentComment.author}`);
+    }) : lines.push('  None');
+
+    lines.push(`\n### 🚫 Blocked / At Risk (${blocked.length})`);
+    blocked.length ? blocked.forEach(t => {
+      lines.push(`  • ${t.name}`);
+      t.rangeComments.forEach(c => lines.push(`    [${c.date}] ${c.author}: ${c.text}`));
+    }) : lines.push('  None');
+
+    if (other.length) {
+      lines.push(`\n### 📌 Other Activity (${other.length})`);
+      other.forEach(t => lines.push(`  • [${t.status}] ${t.name}`));
+    }
+
+    // Tasks with range comments surfaced separately
+    const withComments = active.filter(t => t.rangeComments.length > 1);
+    if (withComments.length) {
+      lines.push(`\n### 💬 Notable Discussions`);
+      withComments.forEach(t => {
+        lines.push(`\n**${t.name}**`);
+        t.rangeComments.forEach(c => lines.push(`  [${c.date}] ${c.author}: ${c.text}`));
+      });
+    }
+  }
+
+  else if (meta.outputType === 'status_report') {
+    const totalDone = tasks.filter(t => isDone(t.status)).length;
+    const pct = tasks.length ? Math.round(totalDone / tasks.length * 100) : 0;
+    const activePeriod = tasks.filter(t => t.isActiveInRange);
+
+    lines.push(`## Project Status — ${meta.rangeStart} to ${meta.rangeEnd}`);
+    lines.push(`Overall completion: ${totalDone}/${tasks.length} tasks (${pct}%)`);
+    lines.push(`Active this period: ${activePeriod.length} task${activePeriod.length !== 1 ? 's' : ''}`);
+    lines.push('');
+    const byStatus = {};
+    tasks.forEach(t => { byStatus[t.status] = (byStatus[t.status] || 0) + 1; });
+    lines.push('### Status Breakdown');
+    Object.entries(byStatus).sort((a,b) => b[1]-a[1]).forEach(([s,n]) => lines.push(`  ${s}: ${n} (${Math.round(n/tasks.length*100)}%)`));
+
+    const withDue = tasks.filter(t => t.dueDate && !isDone(t.status));
+    if (withDue.length) {
+      lines.push('\n### Open Tasks with Due Dates');
+      withDue.forEach(t => lines.push(`  ${t.name} — Due: ${t.dueDate} [${t.status}]`));
+    }
+
+    const recentlyCompleted = activePeriod.filter(t => isDone(t.status));
+    if (recentlyCompleted.length) {
+      lines.push(`\n### Completed This Period`);
+      recentlyCompleted.forEach(t => lines.push(`  ✅ ${t.name}`));
+    }
+  }
+
+  else if (meta.outputType === 'decision_log') {
+    const tasksWithRangeComments = tasks.filter(t => t.rangeComments.length > 0);
+    const allRangeComments = tasks.flatMap(t => t.rangeComments);
+    lines.push(`## Decision Log — ${meta.rangeStart} to ${meta.rangeEnd}`);
+    lines.push(`Extracted from ${tasksWithRangeComments.length} tasks with activity, across ${allRangeComments.length} comments in the period.\n`);
+
+    tasks.forEach(t => {
+      const meaningful = t.rangeComments.filter(c => c.text.length > 40);
+      if (!meaningful.length) return;
+      lines.push(`### ${t.name}  [${t.status}]`);
+      meaningful.forEach(c => lines.push(`  [${c.date}] ${c.author}:\n  ${c.text}\n`));
+    });
+
+    if (!tasksWithRangeComments.length) {
+      lines.push('No significant comment activity found in this period. Try expanding the date range.');
+    }
+  }
+
+  return lines.join('\n');
+}
+
+async function generateWithClaude(data) {
+  const { meta, tasks } = data;
+
+  // Snapshot any live textarea edits before generating
+  savePromptEdits();
+
+  const prompts = PROMPTS[meta.outputType] || PROMPTS.full_project;
+
+  const taskSummary = tasks.map(t => {
+    const commentBlock = t.comments.length
+      ? `\nComments:\n${t.comments.map(c => `  [${c.date}] ${c.author}: ${c.text}`).join('\n')}`
+      : '';
+    return `- [${t.status}] ${t.name}${t.assignees.length ? ` (${t.assignees.join(', ')})` : ''}${t.dueDate ? ` — Due: ${t.dueDate}` : ''}${t.description ? `\n  Description: ${t.description}` : ''}${commentBlock}`;
+  }).join('\n\n');
+
+  const activeInRange = tasks.filter(t => t.isActiveInRange);
+  const replace = (tpl) => tpl
+    .replace(/\{\{project\}\}/g, meta.project)
+    .replace(/\{\{workspace\}\}/g, meta.workspace)
+    .replace(/\{\{space\}\}/g, meta.space)
+    .replace(/\{\{date\}\}/g, new Date(meta.generated).toLocaleString())
+    .replace(/\{\{count\}\}/g, String(tasks.length))
+    .replace(/\{\{active_count\}\}/g, String(activeInRange.length))
+    .replace(/\{\{range_label\}\}/g, meta.rangeLabel)
+    .replace(/\{\{range_start\}\}/g, meta.rangeStart)
+    .replace(/\{\{range_end\}\}/g, meta.rangeEnd)
+    .replace(/\{\{tasks\}\}/g, taskSummary);
+
+  let systemPrompt = replace(prompts.system);
+  let userPrompt = replace(prompts.user);
+
+  // If an existing doc was uploaded, prepend it so Claude updates rather than rewrites
+  if (state.existingDoc) {
+    systemPrompt += `\n\nIMPORTANT: The user has provided an existing version of this document. You MUST read it carefully and produce an UPDATED version — not a fresh rewrite. Preserve sections that haven't changed, update sections that have new data, and add new sections where the new ClickUp data introduces content not present before. Carry forward any narrative, decisions, or context that remains valid.`;
+    userPrompt = `Here is the EXISTING document to update:\n\n<existing_document>\n${state.existingDoc}\n</existing_document>\n\n---\n\n${userPrompt}\n\nProduce the full updated document.`;
+  }
+
+  return await claudeGenerate(systemPrompt, userPrompt);
+}
+
+// STEP RESULT
+function renderStepResult(doc) {
+  const card = document.getElementById('main-card');
+  const hasGdoc = !!state.gdocUrl;
+  card.innerHTML = `
+    <h2>Your document is ready</h2>
+    <p class="subtitle">
+      <span class="pill pill-success">✓ Generated</span>&nbsp;
+      <strong>${OUTPUT_TYPES[state.outputType]?.title}</strong> for <strong>${escHtml(state.list.name)}</strong>
+      — ${state.tasks.length} tasks, ${Object.values(state.comments).flat().length} comments
+    </p>
+
+    <div id="output-area">${escHtml(doc)}</div>
+
+    <div class="output-controls">
+      <button class="btn btn-primary" onclick="downloadMd()">⬇ Download .md</button>
+      <button class="btn btn-secondary" onclick="pushToGoogleDoc()">📄 Open in Google Docs</button>
+      <button class="btn btn-secondary" onclick="copyToClipboard()">📋 Copy to Clipboard</button>
+      <button class="btn btn-secondary" onclick="state.step=3; renderStepper(); renderStepOutput()">← Change Output Type</button>
+      <button class="btn btn-secondary" onclick="state.step=2; renderStepper(); renderStepProject(state._spaces)">← New Project</button>
+    </div>
+
+    <div class="alert alert-info" style="margin-top:16px; align-items: flex-start;">
+      <span>💡</span>
+      <span><strong>Keeping the doc alive:</strong> Download the <code>.md</code> file after each run — it becomes your living document. Next session, drag it into the <em>Existing Document</em> drop zone and Claude will update it rather than start fresh.</span>
+    </div>
+  `;
+}
+
+async function pushToGoogleDoc() {
+  // Copy to clipboard, then open docs.new — user just hits Cmd+V
+  try {
+    await navigator.clipboard.writeText(state.generatedDoc);
+  } catch (_) {
+    // Clipboard failed silently — doc will still open
+  }
+  window.open('https://docs.new', '_blank');
+  // Brief tooltip to guide the user
+  const btn = [...document.querySelectorAll('.output-controls .btn')].find(b => b.textContent.includes('Google Docs'));
+  if (btn) {
+    const orig = btn.textContent;
+    btn.textContent = '✅ Copied! Paste in the new doc (⌘V)';
+    btn.style.background = 'var(--success)';
+    btn.style.color = '#0f1117';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; btn.style.color = ''; }, 4000);
+  }
+}
+function copyToClipboard() {
+  navigator.clipboard.writeText(state.generatedDoc).then(() => alert('Copied to clipboard!'));
+}
+function downloadMd() {
+  const type = state.outputType || 'document';
+  const name = `${state.list?.name || 'project'}-${type}-${new Date().toISOString().slice(0,10)}.md`;
+  const blob = new Blob([state.generatedDoc], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+}
+
+// ─── STYLE LIBRARY ───────────────────────────────────────────────────────────
+const SL = {
+  // { full_project: [{name, content}], weekly_summary: [...], ... }
+  examples: { full_project: [], weekly_summary: [], status_report: [], decision_log: [] },
+  activeTab: 'full_project',
+  learnedPrompts: {},  // type -> { system, user }
+};
+
+const SL_TAB_LABELS = {
+  full_project: 'Full Project',
+  weekly_summary: 'Weekly Summary',
+  status_report: 'Status Report',
+  decision_log: 'Decision Log',
+};
+const SL_FOLDER_HINTS = {
+  full_project: 'examples/full_project/',
+  weekly_summary: 'examples/weekly_summary/',
+  status_report: 'examples/status_report/',
+  decision_log: 'examples/decision_log/',
+};
+
+function openStyleLibrary() {
+  document.getElementById('sl-overlay').classList.remove('hidden');
+  renderSLFileList();
+}
+function closeStyleLibrary() {
+  document.getElementById('sl-overlay').classList.add('hidden');
+}
+
+function switchSLTab(type) {
+  SL.activeTab = type;
+  document.querySelectorAll('.sl-tab').forEach(t => t.classList.toggle('active', t.dataset.type === type));
+  document.getElementById('sl-tab-label').textContent = SL_TAB_LABELS[type];
+  document.querySelector('#sl-dropzone .sl-dz-sub').textContent =
+    `.md or .txt files — from your ${SL_FOLDER_HINTS[type]} folder`;
+  renderSLFileList();
+  // Show learned prompts if available
+  showLearnedPrompts(type);
+}
+
+function renderSLFileList() {
+  const type = SL.activeTab;
+  const files = SL.examples[type] || [];
+  const list = document.getElementById('sl-file-list');
+  const status = document.getElementById('sl-status');
+  list.innerHTML = files.map((f, i) => `
+    <li class="sl-file-item">
+      <span>📄</span>
+      <span class="sl-fi-name" title="${escHtml(f.name)}">${escHtml(f.name)}</span>
+      <span class="sl-fi-size">${(f.content.length / 1024).toFixed(1)} KB</span>
+      <button class="sl-fi-remove" onclick="removeSLFile('${type}', ${i})" title="Remove">×</button>
+    </li>`).join('');
+
+  if (files.length === 0) {
+    status.textContent = `No examples loaded for ${SL_TAB_LABELS[type]} yet.`;
+    status.classList.remove('hidden');
+  } else {
+    status.textContent = `${files.length} example${files.length > 1 ? 's' : ''} loaded`;
+    status.classList.remove('hidden');
+  }
+
+  // Update tab count badges
+  Object.keys(SL.examples).forEach(t => {
+    const badge = document.getElementById(`sl-count-${t}`);
+    const n = SL.examples[t].length;
+    if (badge) {
+      badge.textContent = n;
+      badge.classList.toggle('hidden', n === 0);
+    }
+  });
+
+  // Update train button
+  const total = Object.values(SL.examples).flat().length;
+  const btn = document.getElementById('sl-train-btn');
+  if (btn) btn.disabled = (SL.examples[SL.activeTab].length === 0) || !state.claudeKey;
+
+  // Update floating button dot
+  const dot = document.getElementById('sl-dot');
+  const slBtn = document.getElementById('sl-btn');
+  if (total > 0) {
+    dot?.classList.add('has-examples');
+    slBtn?.classList.add('has-examples');
+  }
+}
+
+function removeSLFile(type, index) {
+  SL.examples[type].splice(index, 1);
+  renderSLFileList();
+}
+
+async function handleSLUpload(fileList) {
+  const type = SL.activeTab;
+  const toRead = Array.from(fileList);
+  for (const file of toRead) {
+    const content = await readFileText(file);
+    // Deduplicate by name
+    if (!SL.examples[type].find(e => e.name === file.name)) {
+      SL.examples[type].push({ name: file.name, content });
+    }
+  }
+  renderSLFileList();
+}
+
+function handleSLDrop(event) {
+  event.preventDefault();
+  document.getElementById('sl-dropzone').classList.remove('drag-over');
+  handleSLUpload(event.dataTransfer.files);
+}
+
+function readFileText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
+async function trainFromExamples() {
+  const type = SL.activeTab;
+  const examples = SL.examples[type];
+  if (!examples.length || !state.claudeKey) return;
+
+  const btn = document.getElementById('sl-train-btn');
+  btn.textContent = '⏳ Analyzing…';
+  btn.disabled = true;
+  document.getElementById('sl-prompts-preview').classList.add('hidden');
+
+  const examplesText = examples.map((e, i) =>
+    `--- EXAMPLE ${i + 1}: ${e.name} ---\n${e.content}`
+  ).join('\n\n');
+
+  const templateVars = '{{project}}, {{workspace}}, {{space}}, {{date}}, {{count}}, {{active_count}}, {{range_label}}, {{range_start}}, {{range_end}}, {{tasks}}';
+
+  const systemPrompt = `You are an expert at analyzing document style and converting it into precise AI prompt instructions.
+Your job: study the provided example documents and write a system prompt + user prompt template that will reliably reproduce that style.
+Be specific about structure, tone, section headings, level of detail, voice, and formatting.
+The user prompt template must include the variable {{tasks}} where ClickUp task data will be injected.`;
+
+  const userPrompt = `I have ${examples.length} example(s) of a "${SL_TAB_LABELS[type]}" document that I want Claude to reproduce from ClickUp data.
+
+Study these examples carefully — their structure, section headings, tone, level of detail, and writing style:
+
+${examplesText}
+
+Now write two things:
+
+1. SYSTEM_PROMPT: A system prompt (2-6 sentences) that instructs Claude on the exact style, tone, structure, and level of detail to use when writing this document type. Make it precise enough that Claude can reproduce the style from scratch.
+
+2. USER_PROMPT_TEMPLATE: A user prompt template for generating this document. It must use these template variables where appropriate: ${templateVars}
+The {{tasks}} variable will be replaced with formatted ClickUp task data before sending to Claude.
+The template should tell Claude exactly what to write and how, referencing the style from the system prompt.
+
+Respond in exactly this format — no other text before or after:
+
+SYSTEM_PROMPT:
+[your system prompt here]
+
+USER_PROMPT_TEMPLATE:
+[your user prompt template here]`;
+
+  try {
+    const response = await claudeGenerate(systemPrompt, userPrompt);
+
+    // Parse response
+    const sysMatch = response.match(/SYSTEM_PROMPT:\n([\s\S]*?)(?=\n\nUSER_PROMPT_TEMPLATE:|$)/);
+    const usrMatch = response.match(/USER_PROMPT_TEMPLATE:\n([\s\S]*?)$/);
+
+    const learnedSystem = sysMatch ? sysMatch[1].trim() : response;
+    const learnedUser = usrMatch ? usrMatch[1].trim() : '';
+
+    SL.learnedPrompts[type] = { system: learnedSystem, user: learnedUser };
+    showLearnedPrompts(type);
+
+    btn.textContent = '✨ Regenerate from examples';
+  } catch (e) {
+    document.getElementById('sl-status').textContent = `Error: ${e.message}`;
+  }
+  btn.disabled = false;
+}
+
+function showLearnedPrompts(type) {
+  const learned = SL.learnedPrompts[type];
+  const preview = document.getElementById('sl-prompts-preview');
+  if (!learned) { preview.classList.add('hidden'); return; }
+  preview.classList.remove('hidden');
+  document.getElementById('sl-sys-preview').value = learned.system;
+  document.getElementById('sl-usr-preview').value = learned.user;
+}
+
+function applyLearnedPrompts() {
+  const type = SL.activeTab;
+  const learned = SL.learnedPrompts[type];
+  if (!learned) return;
+  // Save any textarea edits first
+  const sys = document.getElementById('sl-sys-preview').value;
+  const usr = document.getElementById('sl-usr-preview').value;
+  PROMPTS[type].system = sys;
+  PROMPTS[type].user = usr;
+  // If the prompt editor for this type is open, refresh it
+  if (state.outputType === type) {
+    const sysEl = document.getElementById('pe-system');
+    const usrEl = document.getElementById('pe-user');
+    if (sysEl) sysEl.value = sys;
+    if (usrEl) usrEl.value = usr;
+  }
+  closeStyleLibrary();
+  alert(`✅ Prompts applied for "${SL_TAB_LABELS[type]}". They'll be used on your next generation.`);
+}
+
+function applyLearnedPromptsAll() {
+  // Apply the current tab's learned style to all output types
+  const sourceType = SL.activeTab;
+  const learned = SL.learnedPrompts[sourceType];
+  if (!learned) return;
+  const sys = document.getElementById('sl-sys-preview').value;
+  Object.keys(PROMPTS).forEach(type => { PROMPTS[type].system = sys; });
+  closeStyleLibrary();
+  alert(`✅ System prompt style applied to all output types.`);
+}
+
+function exportPromptsJSON() {
+  const data = {
+    version: 1,
+    exported: new Date().toISOString(),
+    prompts: PROMPTS,
+    learnedFrom: Object.fromEntries(
+      Object.entries(SL.examples).map(([t, files]) => [t, files.map(f => f.name)])
+    ),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'gonimbly-prompts.json';
+  a.click();
+}
+
+function importPromptsJSON(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.prompts) {
+        Object.keys(PROMPTS).forEach(type => {
+          if (data.prompts[type]) {
+            PROMPTS[type].system = data.prompts[type].system || PROMPTS[type].system;
+            PROMPTS[type].user = data.prompts[type].user || PROMPTS[type].user;
+          }
+        });
+        closeStyleLibrary();
+        alert(`✅ Prompts loaded from ${file.name}`);
+      }
+    } catch (_) {
+      alert('Could not parse prompts.json — make sure it was exported from this tool.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// Show/hide the floating Style Library button based on current step
+function updateSLButtonVisibility() {
+  const btn = document.getElementById('sl-btn');
+  if (btn) btn.classList.toggle('hidden', state.step < 3);
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function stripHtml(s) {
+  return String(s || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+renderStepper();
+renderStepAuth();
+</script>
+</body>
+</html>
