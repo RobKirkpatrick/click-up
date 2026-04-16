@@ -1163,6 +1163,18 @@ function renderStepAuth(showDownloadBanner = false) {
       </div>
     </div>
 
+    <div class="env-dropzone" id="prompts-dropzone"
+      ondragover="event.preventDefault(); this.classList.add('drag-over')"
+      ondragleave="this.classList.remove('drag-over')"
+      ondrop="handlePromptsFileDrop(event)">
+      <input type="file" accept=".json,application/json" onchange="importPromptsJSON(this.files[0])" />
+      <div class="env-icon" id="prompts-icon">🧠</div>
+      <div class="env-text">
+        <div class="env-title" id="prompts-dropzone-title">Upload your prompts.json <span style="font-weight:400; color:var(--muted)">(optional)</span></div>
+        <div class="env-sub" id="prompts-dropzone-sub">Restores your saved Style Library prompts from a previous session</div>
+      </div>
+    </div>
+
     <div class="env-divider">or enter keys manually</div>
 
     <div class="field">
@@ -2374,17 +2386,35 @@ function importPromptsJSON(file) {
         Object.keys(PROMPTS).forEach(type => {
           if (data.prompts[type]) {
             PROMPTS[type].system = data.prompts[type].system || PROMPTS[type].system;
-            PROMPTS[type].user = data.prompts[type].user || PROMPTS[type].user;
+            PROMPTS[type].user   = data.prompts[type].user   || PROMPTS[type].user;
           }
         });
+        // Update auth-screen drop zone if present
+        const dz    = document.getElementById('prompts-dropzone');
+        const icon  = document.getElementById('prompts-icon');
+        const title = document.getElementById('prompts-dropzone-title');
+        const sub   = document.getElementById('prompts-dropzone-sub');
+        if (dz)    dz.classList.add('loaded');
+        if (icon)  icon.textContent = '✅';
+        if (title) title.textContent = file.name;
+        if (sub)   sub.textContent   = `${Object.keys(data.prompts).length} output type${Object.keys(data.prompts).length !== 1 ? 's' : ''} loaded`;
+        // Close Style Library panel if it was open
         closeStyleLibrary();
-        alert(`✅ Prompts loaded from ${file.name}`);
+      } else {
+        alert('No prompts found in that file — make sure it was exported from this tool.');
       }
     } catch (_) {
-      alert('Could not parse prompts.json — make sure it was exported from this tool.');
+      alert('Could not parse the file — expected a .json exported from Style Library.');
     }
   };
   reader.readAsText(file);
+}
+
+function handlePromptsFileDrop(event) {
+  event.preventDefault();
+  document.getElementById('prompts-dropzone')?.classList.remove('drag-over');
+  const file = event.dataTransfer?.files?.[0];
+  if (file) importPromptsJSON(file);
 }
 
 // Show/hide the floating Style Library button based on current step
