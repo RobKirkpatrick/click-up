@@ -1739,9 +1739,17 @@ async function startGeneration() {
 
     renderStepResult(finalDoc);
   } catch (e) {
+    const isCredits = /credit|billing|quota|rate.limit|insufficient|overload/i.test(e.message);
+    const isCors    = /fetch|network|cors|failed to fetch/i.test(e.message);
+    const hint = isCredits
+      ? `<div class="alert alert-info" style="margin-top:10px;">💳 This looks like an API billing issue. Check your <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent2)">Anthropic console</a> for credit balance or rate limit status.</div>`
+      : isCors
+      ? `<div class="alert alert-info" style="margin-top:10px;">🌐 Network error — if you're opening the file directly via <code>file://</code>, try serving it locally instead: <code>npx serve .</code></div>`
+      : `<div class="alert alert-info" style="margin-top:10px; font-size:12px;">🐛 This is likely a code bug, not an API error. Open the browser console (F12) for the full stack trace.</div>`;
     card.innerHTML = `
       <h2>Something went wrong</h2>
       <div class="alert alert-danger" style="margin-top:16px;">❌ ${escHtml(e.message)}</div>
+      ${hint}
       <div class="btn-row">
         <button class="btn btn-secondary" onclick="state.step=3; renderStepper(); renderStepOutput()">← Back</button>
         <button class="btn btn-primary" onclick="startGeneration()">Retry</button>
@@ -1963,10 +1971,12 @@ async function generateWithClaude(data) {
   const prompts = PROMPTS[meta.outputType] || PROMPTS.full_project;
 
   const taskSummary = tasks.map(t => {
-    const commentBlock = t.comments.length
-      ? `\nComments:\n${t.comments.map(c => `  [${c.date}] ${c.author}: ${c.text}`).join('\n')}`
+    const allC = t.allComments || [];
+    const rangeC = t.rangeComments || [];
+    const commentBlock = allC.length
+      ? `\nComments (${rangeC.length} in period, ${allC.length} total):\n${allC.map(c => `  [${c.date}]${rangeC.includes(c) ? ' 🟢' : ''} ${c.author}: ${c.text}`).join('\n')}`
       : '';
-    return `- [${t.status}] ${t.name}${t.assignees.length ? ` (${t.assignees.join(', ')})` : ''}${t.dueDate ? ` — Due: ${t.dueDate}` : ''}${t.description ? `\n  Description: ${t.description}` : ''}${commentBlock}`;
+    return `- [${t.status}]${t.isActiveInRange ? ' 🟢' : ''} ${t.name}${t.assignees.length ? ` (${t.assignees.join(', ')})` : ''}${t.dueDate ? ` — Due: ${t.dueDate}` : ''}${t.description ? `\n  Description: ${t.description}` : ''}${commentBlock}`;
   }).join('\n\n');
 
   const activeInRange = tasks.filter(t => t.isActiveInRange);
