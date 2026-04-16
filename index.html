@@ -1986,9 +1986,78 @@ function renderStepResult(doc) {
 
     <div class="alert alert-info" style="margin-top:16px; align-items: flex-start;">
       <span>💡</span>
-      <span><strong>Keeping the doc alive:</strong> Download the <code>.md</code> file after each run — it becomes your living document. Next session, drag it into the <em>Existing Document</em> drop zone and Claude will update it rather than start fresh.</span>
+      <span><strong>Keeping the doc alive:</strong> Download the <code>.md</code> file after each run — it becomes your living document. Next session, drag it into the <em>Existing Document</em> drop zone and Claude will update it rather than start fresh. Or <a href="#" onclick="toggleAutoSync(); return false;" style="color:var(--accent2);">set up Google Docs auto-sync →</a></span>
+    </div>
+
+    <div id="autosync-section" class="hidden" style="margin-top:12px;">
+      <div class="prompt-editor">
+        <div class="prompt-editor-header open" onclick="this.classList.toggle('open'); document.getElementById('autosync-body').classList.toggle('open')">
+          <span class="pe-left">🔄 <span>Google Docs Auto-Sync via Apps Script</span></span>
+          <span class="pe-chevron">▾</span>
+        </div>
+        <div class="prompt-editor-body open" id="autosync-body">
+          <p style="font-size:13px; color:var(--muted); line-height:1.6; margin-bottom:14px;">
+            For a doc that updates itself on a schedule — paste this script into your Google Doc once, set a time trigger, and it re-fetches the latest content automatically.
+          </p>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:12px; font-weight:600; color:var(--muted); display:block; margin-bottom:6px;">Your Google Doc URL</label>
+            <input type="url" id="gdoc-url-input" placeholder="https://docs.google.com/document/d/…" value="${state.gdocUrl || ''}"
+              oninput="state.gdocUrl = this.value"
+              style="width:100%; padding:9px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:13px; outline:none;" />
+          </div>
+          <div class="pe-label">Apps Script — paste into Extensions → Apps Script in your doc</div>
+          <div id="output-area" style="max-height:220px; font-size:11px; margin-bottom:10px;">${escHtml(buildAppsScript())}</div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn btn-secondary" style="font-size:12px; padding:8px 16px;" onclick="copyAppsScript()">📋 Copy script</button>
+            <button class="btn btn-secondary" style="font-size:12px; padding:8px 16px;" onclick="if(state.gdocUrl) window.open(state.gdocUrl,'_blank'); else alert('Paste your Google Doc URL above first.')">📄 Open my doc</button>
+          </div>
+          <div class="alert alert-info" style="margin-top:14px; font-size:12px;">
+            <span>ℹ️</span>
+            <span>After pasting the script, go to <strong>Triggers</strong> (clock icon) → Add Trigger → run <code>pushContent</code> on your preferred schedule (e.g. every Monday 8am). The script stores the content in the script itself — re-export and re-paste whenever you want to update what it pushes.</span>
+          </div>
+        </div>
+      </div>
     </div>
   `;
+}
+
+function toggleAutoSync() {
+  document.getElementById('autosync-section')?.classList.toggle('hidden');
+}
+
+function buildAppsScript() {
+  const escaped = (state.generatedDoc || '').replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+  return `// Go Nimbly × ClickUp — Auto-Sync Script
+// Paste into Extensions → Apps Script, then set a time-based trigger on pushContent()
+
+const CONTENT = \`${escaped}\`;
+
+function pushContent() {
+  const doc = DocumentApp.getActiveDocument();
+  const body = doc.getBody();
+  body.clear();
+
+  CONTENT.split('\\n').forEach(line => {
+    if (line.startsWith('# '))        body.appendParagraph(line.slice(2)).setHeading(DocumentApp.ParagraphHeading.HEADING1);
+    else if (line.startsWith('## '))  body.appendParagraph(line.slice(3)).setHeading(DocumentApp.ParagraphHeading.HEADING2);
+    else if (line.startsWith('### ')) body.appendParagraph(line.slice(4)).setHeading(DocumentApp.ParagraphHeading.HEADING3);
+    else if (line.startsWith('- ') || line.startsWith('• ')) body.appendListItem(line.slice(2));
+    else body.appendParagraph(line);
+  });
+
+  Logger.log('Content updated: ' + new Date().toLocaleString());
+}`;
+}
+
+function copyAppsScript() {
+  navigator.clipboard.writeText(buildAppsScript()).then(() => {
+    const btn = [...document.querySelectorAll('#autosync-body .btn')].find(b => b.textContent.includes('Copy'));
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = '✅ Copied!';
+      setTimeout(() => { btn.textContent = orig; }, 2500);
+    }
+  });
 }
 
 async function pushToGoogleDoc() {
