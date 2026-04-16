@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Go Nimbly × ClickUp — Project Intelligence</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <style>
   :root {
     --bg: #0f1117;
@@ -1069,11 +1070,11 @@ function handleEnvDrop(event) {
 }
 
 // ─── EXISTING DOC UPLOAD ──────────────────────────────────────────────────────
-function handleExistingDocUpload(file) {
+async function handleExistingDocUpload(file) {
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    state.existingDoc = e.target.result;
+  try {
+    const text = await readFileText(file);
+    state.existingDoc = text;
     const dz = document.getElementById('existing-doc-dropzone');
     const icon = document.getElementById('existing-doc-icon');
     const title = document.getElementById('existing-doc-title');
@@ -1083,12 +1084,13 @@ function handleExistingDocUpload(file) {
     if (dz) dz.classList.add('loaded');
     if (icon) icon.textContent = '✅';
     if (title) title.textContent = file.name;
-    const wordCount = state.existingDoc.split(/\s+/).length;
+    const wordCount = text.split(/\s+/).filter(Boolean).length;
     if (sub) sub.textContent = `${wordCount.toLocaleString()} words loaded — Claude will update this doc, not rewrite it`;
     if (preview) preview.classList.remove('hidden');
-    if (previewText) previewText.textContent = state.existingDoc.slice(0, 800) + (state.existingDoc.length > 800 ? '\n…' : '');
-  };
-  reader.readAsText(file);
+    if (previewText) previewText.textContent = text.slice(0, 800) + (text.length > 800 ? '\n…' : '');
+  } catch (err) {
+    alert(err.message);
+  }
 }
 
 function handleExistingDocDrop(event) {
@@ -1520,6 +1522,17 @@ function renderStepOutput() {
 
     ${needsClaude ? `<div class="alert alert-info">💡 Add a Claude API key on step 1 to unlock AI-written narrative summaries. Without it, documents are generated as structured data exports.</div>` : ''}
 
+    ${state.claudeKey ? `
+    <div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; gap:16px;">
+      <div>
+        <div style="font-size:13px; font-weight:700; margin-bottom:3px;">🎨 Style Library</div>
+        <div style="font-size:12px; color:var(--muted); line-height:1.4;">Train Claude on your team's writing style by uploading example docs. Claude will learn structure, tone, and voice — then reproduce it.</div>
+      </div>
+      <button class="btn btn-secondary" style="font-size:12px; padding:9px 16px; flex-shrink:0; white-space:nowrap;" onclick="openStyleLibrary()">
+        ${Object.values(SL?.examples||{}).flat().length > 0 ? '✅' : '📂'} Open Style Library
+      </button>
+    </div>` : ''}
+
     <div class="output-grid">
       ${Object.entries(OUTPUT_TYPES).map(([key, o]) => `
         <div class="output-card" onclick="selectOutput('${key}')" id="ot-${key}">
@@ -1565,7 +1578,14 @@ function renderStepOutput() {
     </div>
 
     <div id="existing-doc-section" class="hidden" style="margin-top:20px;">
-      <div class="section-title">Existing Document <span style="font-weight:400;text-transform:none;font-size:12px;color:var(--muted)">(optional — Claude reads this first and updates rather than starting from scratch)</span></div>
+      <div class="section-title">
+        Update an existing document
+        <span style="font-weight:400;text-transform:none;font-size:12px;color:var(--muted)"> — drop a previous output here and Claude will update it, not rewrite it</span>
+      </div>
+      <div class="alert alert-info" style="margin-bottom:12px; font-size:12px;">
+        <span>📌</span>
+        <span>This is for <strong>content you want carried forward</strong> — a previous weekly summary, your master project doc, etc. To train Claude on your <em>writing style</em>, use <a href="#" onclick="openStyleLibrary(); return false;" style="color:var(--accent2); font-weight:700;">Style Library ↗</a> instead.</span>
+      </div>
       <div class="env-dropzone" id="existing-doc-dropzone"
         ondragover="event.preventDefault(); this.classList.add('drag-over')"
         ondragleave="this.classList.remove('drag-over')"
@@ -2200,7 +2220,23 @@ function handleSLDrop(event) {
   handleSLUpload(event.dataTransfer.files);
 }
 
-function readFileText(file) {
+async function readFileText(file) {
+  const isDocx = file.name.endsWith('.docx') || file.name.endsWith('.doc');
+  if (isDocx) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async e => {
+        try {
+          const result = await mammoth.extractRawText({ arrayBuffer: e.target.result });
+          resolve(result.value);
+        } catch (err) {
+          reject(new Error('Could not read .docx — try saving as .txt or .md first.'));
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  }
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = e => resolve(e.target.result);
