@@ -363,11 +363,21 @@
   /* HIDE/SHOW */
   .hidden { display: none !important; }
 
-  /* STYLE LIBRARY */
-  .style-library-btn {
+  /* FLOATING BUTTONS */
+  .floating-btns {
     position: fixed;
     bottom: 28px;
     right: 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    z-index: 100;
+  }
+
+  /* STYLE LIBRARY */
+  .style-library-btn {
+    position: static;
     padding: 11px 18px;
     background: var(--surface2);
     border: 1px solid var(--border);
@@ -384,6 +394,23 @@
     transition: all .2s;
   }
   .style-library-btn:hover { border-color: var(--accent); background: rgba(124,92,252,.12); }
+  .last-result-btn {
+    position: static;
+    padding: 11px 18px;
+    background: var(--surface2);
+    border: 1px solid var(--success);
+    border-radius: 50px;
+    color: var(--success);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.4);
+    transition: all .2s;
+  }
+  .last-result-btn:hover { background: rgba(62,207,142,.12); }
   .style-library-btn .sl-dot {
     width: 8px; height: 8px;
     border-radius: 50%;
@@ -787,10 +814,15 @@
   <!-- Injected by JS -->
 </div>
 
-<!-- ========== STYLE LIBRARY BUTTON (shown on output step) ========== -->
-<button class="style-library-btn hidden" id="sl-btn" onclick="openStyleLibrary()">
-  <span class="sl-dot" id="sl-dot"></span> Style Library
-</button>
+<!-- ========== FLOATING ACTION BUTTONS ========== -->
+<div class="floating-btns">
+  <button class="last-result-btn hidden" id="last-result-btn" onclick="viewLastResult()">
+    ↩ View last result
+  </button>
+  <button class="style-library-btn hidden" id="sl-btn" onclick="openStyleLibrary()">
+    <span class="sl-dot" id="sl-dot"></span> Style Library
+  </button>
+</div>
 
 <!-- ========== STYLE LIBRARY PANEL ========== -->
 <div class="sl-overlay hidden" id="sl-overlay" onclick="if(event.target===this) closeStyleLibrary()">
@@ -1739,6 +1771,7 @@ async function startGeneration() {
     setProgress(100, 'Done!');
 
     renderStepResult(finalDoc);
+    updateSLButtonVisibility();
   } catch (e) {
     const isCredits = /credit|billing|quota|rate.limit|insufficient|overload/i.test(e.message);
     const isCors    = /fetch|network|cors|failed to fetch/i.test(e.message);
@@ -2428,10 +2461,24 @@ function handlePromptsFileDrop(event) {
   if (file) importPromptsJSON(file);
 }
 
-// Show/hide the floating Style Library button based on current step
+// Show/hide floating buttons based on current step + state
 function updateSLButtonVisibility() {
-  const btn = document.getElementById('sl-btn');
-  if (btn) btn.classList.toggle('hidden', state.step < 3);
+  const slBtn = document.getElementById('sl-btn');
+  if (slBtn) slBtn.classList.toggle('hidden', state.step < 3);
+
+  const lrBtn = document.getElementById('last-result-btn');
+  if (lrBtn) {
+    const hasResult = !!state.generatedDoc;
+    const onResultScreen = state.step === 4 && document.getElementById('output-area');
+    lrBtn.classList.toggle('hidden', !hasResult || !!onResultScreen);
+  }
+}
+
+function viewLastResult() {
+  if (!state.generatedDoc) return;
+  state.step = 4;
+  renderStepper();
+  renderStepResult(state.generatedDoc);
 }
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
